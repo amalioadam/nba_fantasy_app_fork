@@ -1,13 +1,28 @@
 import React from "react";
-import { Routes, Route, Link } from "react-router-dom";
-import { AuthProvider } from "./AuthContext";
+import { Routes, Route, Link, useNavigate, Outlet, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./AuthContext";
+import { HomePage } from "./pages/HomePage"; // Import actual HomePage
+import { LoginPage } from "./pages/LoginPage"; // Import actual LoginPage (will be implemented next)
 
-// Placeholder pages - zostaną później zastąpione prawdziwymi komponentami
-const HomePage = () => <div>Strona Główna (prywatna)</div>;
-const LoginPage = () => <div>Strona Logowania</div>;
-const RegisterPage = () => <div>Strona Rejestracji</div>;
+// A wrapper for <Route> that redirects to the login screen if you're not yet authenticated.
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { token } = useAuth();
+  const navigate = useNavigate();
+
+  if (!token) {
+    // Redirect them to the /login page, but save the current location they were
+    // trying to go to when they were redirected. This allows us to send them
+    // along to that page after they login, which is a nicer user experience
+    // than dropping them off on the home page.
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 function App() {
+  const { token, logout } = useAuth(); // Use useAuth in App for navigation logic
+
   return (
     <AuthProvider>
       <div>
@@ -16,19 +31,35 @@ function App() {
             <li>
               <Link to="/">Home</Link>
             </li>
-            <li>
-              <Link to="/login">Login</Link>
-            </li>
-            <li>
+            {!token ? ( // Show Login link only if not logged in
+              <li>
+                <Link to="/login">Login</Link>
+              </li>
+            ) : ( // Show Logout button if logged in
+              <li>
+                <button onClick={logout}>Logout</button>
+              </li>
+            )}
+            {/* We don't have a RegisterPage yet, so commenting it out for now */}
+            {/* <li>
               <Link to="/register">Register</Link>
-            </li>
+            </li> */}
           </ul>
         </nav>
         <hr />
         <Routes>
-          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
+          {/* Protect the HomePage */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          {/* Add a catch-all for unknown routes, redirecting to home or login */}
+          <Route path="*" element={<Navigate to={token ? "/" : "/login"} replace />} />
         </Routes>
       </div>
     </AuthProvider>
