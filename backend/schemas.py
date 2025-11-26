@@ -34,6 +34,10 @@ class User(UserBase):
     class Config:
         orm_mode = True
 
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
 # Schematy dla Tokena (JWT)
 class Token(BaseModel):
     access_token: str

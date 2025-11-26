@@ -42,10 +42,10 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 @app.post("/login", response_model=schemas.Token)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+def login_for_access_token(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     """Endpoint do logowania i uzyskiwania tokena JWT."""
-    user = auth.get_user(db, email=form_data.username)
-    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+    user = auth.get_user(db, email=user_credentials.email)
+    if not user or not auth.verify_password(user_credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
