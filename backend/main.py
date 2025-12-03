@@ -95,7 +95,8 @@ def get_all_players(
     Endpoint do pobierania listy wszystkich zawodników.
     Dostępny dla każdego zalogowanego użytkownika.
     """
-    players = db.query(models.Player).all()
+    
+    players = db.query(models.Player).filter(models.Player.is_active == True).all()
     return players
 
 # Endpointy do zarządzania drużyną użytkownika

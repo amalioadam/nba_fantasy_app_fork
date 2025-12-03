@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Boolean
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -33,6 +33,7 @@ class Player(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, index=True, nullable=False)
+    is_active = Column(Boolean, nullable=False)
     position = Column(String)
     team_name = Column(String)
     points = Column(Integer, default=0)

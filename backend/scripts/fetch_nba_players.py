@@ -24,11 +24,12 @@ def fetch_and_store_nba_players():
     for player_data in nba_players:
         player_id = player_data['id']
         full_name = player_data['full_name']
+        is_active = player_data['is_active']
 
         existing_player = db.query(Player).filter(Player.id == player_id).first()
 
         if not existing_player:
-            new_player = Player(id=player_id, full_name=full_name, position=None, team_name=None)
+            new_player = Player(id=player_id, full_name=full_name, is_active=is_active, position=None, team_name=None)
             db.add(new_player)
             added_count += 1
 
