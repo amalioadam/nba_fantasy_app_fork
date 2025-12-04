@@ -45,4 +45,3 @@ def fetch_and_store_nba_players():
 if __name__ == "__main__":
     create_tables()
     fetch_and_store_nba_players()
-    

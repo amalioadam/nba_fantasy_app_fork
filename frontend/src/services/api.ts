@@ -28,4 +28,24 @@ export const getPlayers = async (token: string) => {
     return response.data;
 };
 
+export const getMyTeam = async (token: string) => {
+    const response = await api.get('/me/team', {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    return response.data;
+};
+
+export const updateMyTeam = async (token: string, playerIds: number[]) => {
+    const response = await api.post('/me/team', 
+    { player_ids: playerIds },
+    {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    return response.data;
+};
+
 export default api;

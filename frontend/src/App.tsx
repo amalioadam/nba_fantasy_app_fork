@@ -1,10 +1,11 @@
 import React from "react";
-import { Routes, Route, Link, useNavigate, Outlet, Navigate } from "react-router-dom";
+import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
-import { PlayersPage } from "./pages/PlayersPage"; // Import PlayersPage
+import { PlayersPage } from "./pages/PlayersPage";
+import { MyTeamPage } from "./pages/MyTeamPage"; // Import MyTeamPage
 import { PrivateRoute } from "./components/PrivateRoute";
 
 function App() {
@@ -29,7 +30,10 @@ function App() {
           ) : (
             <>
               <li>
-                <Link to="/players">Players</Link> {/* Add Players link */}
+                <Link to="/players">Players</Link>
+              </li>
+              <li>
+                <Link to="/my-team">My Team</Link> {/* Add My Team link */}
               </li>
               <li>
                 <button onClick={logout}>Logout</button>
@@ -42,7 +46,6 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        {/* Protect the HomePage */}
         <Route
           path="/"
           element={
@@ -51,7 +54,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* Protect the PlayersPage */}
         <Route
           path="/players"
           element={
@@ -60,7 +62,14 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* Add a catch-all for unknown routes, redirecting to home or login */}
+        <Route
+          path="/my-team"
+          element={
+            <PrivateRoute>
+              <MyTeamPage />
+            </PrivateRoute>
+          }
+        />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
       </Routes>
     </div>

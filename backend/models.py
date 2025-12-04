@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-DATABASE_URL = "sqlite:///./nba_fantasy.db"
+DATABASE_URL = "sqlite:///./data/nba_fantasy.db"
 
 Base = declarative_base()
 
