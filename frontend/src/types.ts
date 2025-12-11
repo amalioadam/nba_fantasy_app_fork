@@ -6,4 +6,5 @@ export interface Player {
     points: number;
     rebounds: number;
     assists: number;
+    fantasy_points: number;
 }
