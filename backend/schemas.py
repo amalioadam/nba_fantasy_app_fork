@@ -13,6 +13,7 @@ class PlayerCreate(PlayerBase):
 
 class Player(PlayerBase):
     id: int
+    last_game_fantasy_points: Optional[float] = None
 
     class Config:
         from_attributes = True

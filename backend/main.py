@@ -1,7 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+from scripts.fetch_nba_players import update_stats_for_active_players
+import atexit
 
 import auth, models, schemas
 from models import get_db, create_tables
@@ -96,7 +99,7 @@ def get_all_players(
     Dostępny dla każdego zalogowanego użytkownika.
     """
     
-    players = db.query(models.Player).filter(models.Player.is_active == True).all()
+    players = db.query(models.Player).options(joinedload(models.Player.game_stats)).filter(models.Player.is_active == True).all()
     return players
 
 # Endpointy do zarządzania drużyną użytkownika
@@ -109,7 +112,7 @@ def get_my_team(
     """
     Pobiera listę zawodników w drużynie aktualnie zalogowanego użytkownika.
     """
-    return current_user.players
+    return db.query(models.User).options(joinedload(models.User.players).joinedload(models.Player.game_stats)).filter(models.User.id == current_user.id).first().players
 
 @app.post("/me/team/players/{player_id}", response_model=schemas.Player)
 def add_player_to_team(
@@ -172,3 +175,29 @@ def remove_player_from_team(
     current_user.players.remove(player)
     db.commit()
     return
+
+
+# --- Scheduler Logic ---
+
+def run_stats_update():
+    """
+    A wrapper function for the scheduled job to ensure logging and error handling.
+    """
+    print("Scheduler: Triggered stats update job...")
+    try:
+        update_stats_for_active_players()
+        print("Scheduler: Stats update job finished successfully.")
+    except Exception as e:
+        print(f"Scheduler: An error occurred during the stats update job: {e}")
+
+# Create a scheduler
+scheduler = BackgroundScheduler()
+
+# Schedule the job to run every day at 3:00 AM
+scheduler.add_job(run_stats_update, 'cron', hour=9, minute=0)
+
+# Start the scheduler
+scheduler.start()
+
+# Register a shutdown function to be called when the application exits
+atexit.register(lambda: scheduler.shutdown())

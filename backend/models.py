@@ -2,6 +2,7 @@ import os
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table, Boolean, Float, UniqueConstraint
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from typing import Optional
 
 # Absolutna ścieżka do katalogu, w którym znajduje się ten plik
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -53,6 +54,14 @@ class Player(Base):
     
     # Relacja do statystyk z poszczególnych meczy
     game_stats = relationship("PlayerGameStats", back_populates="player", cascade="all, delete-orphan")
+
+    @property
+    def last_game_fantasy_points(self) -> Optional[float]:
+        if not self.game_stats:
+            return None
+        # Sort by game_date (assuming YYYY-MM-DD format for string comparison)
+        latest_game = max(self.game_stats, key=lambda stat: stat.game_date)
+        return latest_game.fantasy_points
 
 class PlayerGameStats(Base):
     __tablename__ = "player_game_stats"

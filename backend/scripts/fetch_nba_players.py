@@ -139,7 +139,7 @@ def update_stats_for_active_players():
                     print(f"Updated {player.full_name} ({game_id}), avg FP: {player.average_fantasy_points:.2f}")
 
             # Pauza między batchami, żeby nie przeciążać API
-            time.sleep(20)
+            time.sleep(40)
 
         db.commit()
         print(f"\nUpdated stats for {updated_count} games.")
