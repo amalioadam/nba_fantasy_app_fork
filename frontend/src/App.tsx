@@ -6,11 +6,13 @@ import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { PlayersPage } from "./pages/PlayersPage";
 import { MyTeamPage } from "./pages/MyTeamPage";
-import LeaderboardPage from "./pages/LeaderboardPage"; // Import LeaderboardPage
+import LeaderboardPage from "./pages/LeaderboardPage";
+import AdminPage from "./pages/AdminPage"; // Import AdminPage
 import { PrivateRoute } from "./components/PrivateRoute";
+import { AdminRoute } from "./components/AdminRoute"; // Import AdminRoute
 
 function App() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth(); // Get user from context
 
   return (
     <div>
@@ -37,8 +39,13 @@ function App() {
                 <Link to="/my-team">My Team</Link>
               </li>
               <li>
-                <Link to="/leaderboard">Leaderboard</Link> {/* Add Leaderboard link */}
+                <Link to="/leaderboard">Leaderboard</Link>
               </li>
+              {user?.role === 'admin' && ( // Conditionally render Admin link
+                <li>
+                  <Link to="/admin">Admin Panel</Link>
+                </li>
+              )}
               <li>
                 <button onClick={logout}>Logout</button>
               </li>
@@ -80,6 +87,14 @@ function App() {
             <PrivateRoute>
               <LeaderboardPage />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
           }
         />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />

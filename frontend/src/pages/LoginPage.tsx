@@ -16,7 +16,7 @@ export const LoginPage = () => {
 
     try {
       const data = await loginUser(email, password);
-      login(data.access_token);
+      await login(data.access_token); // Await the login process
       navigate("/");
     } catch (err) {
       let errorMessage = "An unknown error occurred.";

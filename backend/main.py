@@ -263,6 +263,61 @@ def get_leaderboard(
     users = db.query(models.User).order_by(models.User.total_fantasy_points.desc()).all()
     return users
 
+# --- Admin Endpoints ---
+
+@app.get("/admin/users", response_model=list[schemas.User])
+def admin_get_all_users(
+    db: Session = Depends(get_db), 
+    current_admin: models.User = Depends(auth.get_current_active_admin)
+):
+    """[Admin only] Pobiera listę wszystkich użytkowników."""
+    return db.query(models.User).all()
+
+@app.delete("/admin/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_active_admin)
+):
+    """[Admin only] Usuwa użytkownika o podanym ID."""
+    if user_id == current_admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin cannot delete themselves."
+        )
+    
+    user_to_delete = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user_to_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+        
+    db.delete(user_to_delete)
+    db.commit()
+    return
+
+@app.put("/admin/users/{user_id}/reset-password", response_model=schemas.User)
+def admin_reset_user_password(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_admin: models.User = Depends(auth.get_current_active_admin)
+):
+    """[Admin only] Resetuje hasło użytkownika do wartości domyślnej."""
+    user_to_reset = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user_to_reset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found."
+        )
+    
+    # Ustawienie nowego, zahashowanego hasła. W praktyce można by wygenerować losowe.
+    new_password = "newpassword" # Hasło domyślne
+    user_to_reset.hashed_password = auth.get_password_hash(new_password)
+    db.commit()
+    db.refresh(user_to_reset)
+    return user_to_reset
+
 # --- Scheduler Logic ---
 
 def run_stats_update():

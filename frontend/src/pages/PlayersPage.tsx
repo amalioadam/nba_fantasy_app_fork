@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../AuthContext";
-import { getPlayers, getMyTeam, addPlayerToTeam, removePlayerFromTeam } from "../services/api";
+import { getPlayers, addPlayerToTeam, removePlayerFromTeam } from "../services/api";
 import { Player } from "../types";
 import { PlayerCard } from "../components/PlayerCard";
 
@@ -21,14 +21,16 @@ const topBarStyle: React.CSSProperties = {
 };
 
 export const PlayersPage = () => {
-  const { token } = useAuth();
+  const { token, user, login } = useAuth(); // Get user and login (for refresh)
   const [players, setPlayers] = useState<Player[]>([]);
-  const [teamPlayerIds, setTeamPlayerIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Derive team player IDs from the user object in the context
+  const teamPlayerIds = new Set(user?.players.map((p) => p.id) || []);
+
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchPlayers = async () => {
       if (!token) {
         setError("No authentication token found.");
         setLoading(false);
@@ -36,39 +38,25 @@ export const PlayersPage = () => {
       }
       try {
         setLoading(true);
-        const [allPlayers, myTeam] = await Promise.all([
-          getPlayers(token),
-          getMyTeam(token),
-        ]);
+        const allPlayers = await getPlayers(token);
         setPlayers(allPlayers);
-        setTeamPlayerIds(new Set(myTeam.map((p: Player) => p.id)));
       } catch (err) {
-        setError("Failed to fetch data.");
+        setError("Failed to fetch players.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInitialData();
+    fetchPlayers();
   }, [token]);
 
   const handleAddToTeam = async (playerId: number) => {
     if (!token) return;
-    
-    // Optimistic UI update
-    setTeamPlayerIds((prev) => new Set(prev).add(playerId));
 
     try {
       await addPlayerToTeam(token, playerId);
-    } catch (err: any) { // Catch the error to get details
-      // Revert UI on failure
-      setTeamPlayerIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(playerId);
-        return newSet;
-      });
-
-      // Display specific error message from backend
+      await login(token); // Refresh context user data
+    } catch (err: any) {
       if (err.response && err.response.data && err.response.data.detail) {
         alert(err.response.data.detail);
       } else {
@@ -80,19 +68,11 @@ export const PlayersPage = () => {
   const handleRemoveFromTeam = async (playerId: number) => {
     if (!token) return;
 
-    // Optimistic UI update
-    setTeamPlayerIds((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(playerId);
-      return newSet;
-    });
-
     try {
       await removePlayerFromTeam(token, playerId);
+      await login(token); // Refresh context user data
     } catch (error) {
       alert("Failed to remove player from your team. Please try again.");
-      // Revert UI on failure
-      setTeamPlayerIds((prev) => new Set(prev).add(playerId));
     }
   };
 

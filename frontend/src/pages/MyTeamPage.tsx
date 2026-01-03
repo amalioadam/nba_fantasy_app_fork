@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useAuth } from "../AuthContext";
-import { getUsersMe, removePlayerFromTeam } from "../services/api"; // Usunięto getMyTeam
-import { Player, User } from "../types"; // Dodano User
+import { removePlayerFromTeam } from "../services/api";
 import { PlayerCard } from "../components/PlayerCard";
 
 const teamListStyle: React.CSSProperties = {
@@ -13,77 +12,31 @@ const teamListStyle: React.CSSProperties = {
 };
 
 export const MyTeamPage = () => {
-  const { token } = useAuth();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!token) {
-        setError("No authentication token found.");
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const userData = await getUsersMe(token);
-        setUser(userData);
-      } catch (err) {
-        setError("Failed to fetch user data.");
-        console.error("Failed to fetch user data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [token]);
+  const { token, user, login } = useAuth(); // Get user and login (for refresh) from context
 
   const handleRemoveFromTeam = async (playerId: number) => {
     if (!token) return;
 
-    const originalPlayers = user ? [...user.players] : [];
-    setUser((currentUser) => {
-      if (!currentUser) return null;
-      return {
-        ...currentUser,
-        players: currentUser.players.filter((player) => player.id !== playerId),
-      };
-    });
-
     try {
       await removePlayerFromTeam(token, playerId);
-      const updatedUserData = await getUsersMe(token);
-      setUser(updatedUserData);
+      // Refresh the user data in the context to reflect the change in team and total points
+      await login(token); 
     } catch (error) {
       alert("Failed to remove player from your team. Please try again.");
-      setUser((currentUser) => {
-        if (!currentUser) return null;
-        return {
-          ...currentUser,
-          players: originalPlayers,
-        };
-      });
     }
   };
-
-  if (loading) {
+  
+  if (!user) {
     return <div>Loading user data...</div>;
   }
 
-  if (error) {
-    return <div style={{ color: "red" }}>Error: {error}</div>;
-  }
-
-  const playersInTeam = user?.players || [];
+  const playersInTeam = user.players || [];
 
   return (
     <div>
       <h2>My Team</h2>
-      {user && (
-        <p>Twoje całkowite punkty fantasy: {user.total_fantasy_points.toFixed(2)}</p>
-      )}
+      <p>Twoje całkowite punkty fantasy: {user.total_fantasy_points.toFixed(2)}</p>
+      
       {playersInTeam.length === 0 ? (
         <p>
           You haven't selected any players yet. Go to the Players page to build

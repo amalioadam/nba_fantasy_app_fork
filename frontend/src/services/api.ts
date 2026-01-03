@@ -76,3 +76,32 @@ export const removePlayerFromTeam = async (token: string, playerId: number) => {
 };
 
 export default api;
+
+// --- Admin API Services ---
+
+export const adminGetAllUsers = async (token: string) => {
+    const response = await api.get('/admin/users', {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    return response.data;
+};
+
+export const adminDeleteUser = async (token: string, userId: number) => {
+    const response = await api.delete(`/admin/users/${userId}`, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    return response.data;
+};
+
+export const adminResetUserPassword = async (token: string, userId: number) => {
+    const response = await api.put(`/admin/users/${userId}/reset-password`, {}, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    return response.data;
+};

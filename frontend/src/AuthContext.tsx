@@ -3,41 +3,75 @@ import React, {
   useContext,
   useState,
   useEffect,
-  ReactNode,
 } from "react";
+import { User } from "./types"; // Import User type
+import { getUsersMe } from "./services/api"; // Import API function
 
 interface AuthContextType {
   token: string | null;
+  user: User | null; // Add user to context
   login: (token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null); // Add user state
+  const [loading, setLoading] = useState(true);
 
-  const isAuthenticated = !!token;
+  const isAuthenticated = !!token && !!user;
 
-  const login = (newToken: string) => {
-    setToken(newToken);
+  const login = async (newToken: string) => {
     localStorage.setItem("token", newToken);
+    setToken(newToken);
+    try {
+      const userData = await getUsersMe(newToken);
+      setUser(userData);
+    } catch (error) {
+      console.error("Failed to fetch user on login", error);
+      // If user fetch fails, logout to prevent inconsistent state
+      logout();
+      // Re-throw the error so the calling component knows the login failed
+      throw error;
+    }
   };
 
   const logout = () => {
     setToken(null);
+    setUser(null);
     localStorage.removeItem("token");
   };
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      setToken(storedToken);
-    }
+    const restoreSession = async () => {
+      const storedToken = localStorage.getItem("token");
+      if (storedToken) {
+        setToken(storedToken);
+        try {
+          const userData = await getUsersMe(storedToken);
+          setUser(userData);
+        } catch (error) {
+          console.error("Failed to restore session, logging out.", error);
+          // Token is invalid, so clear it
+          logout();
+        }
+      }
+      setLoading(false);
+    };
+
+    restoreSession();
   }, []);
 
+  // Show a loading indicator while session is being restored
+  if (loading) {
+    return <div>Loading session...</div>;
+  }
+
   return (
-    <AuthContext.Provider value={{ token, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ token, user, login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
