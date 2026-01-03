@@ -1,31 +1,50 @@
-from nba_api.stats.endpoints import commonallplayers, playergamelog, commonteamroster
+from nba_api.stats.endpoints import commonallplayers, commonteamroster, leaguegamelog
 from nba_api.stats.static import teams
 from sqlalchemy.orm import joinedload
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
 import time
 import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import Player, PlayerGameStats, SessionLocal, create_tables
+from models import Player, PlayerGameStats, User, SessionLocal, create_tables
 
 MAX_WORKERS = 5
 BATCH_SIZE = 20  # liczba graczy na batch
+SEASON = "2025-26"
 
-def fetch_latest_game_log(player_id: int):
+
+def fetch_latest_game_logs(player_ids, target_date):
+    """
+    Pobiera statystyki wszystkich graczy dla konkretnego dnia jednym zapytaniem.
+    Zwraca dict {player_id: row} z ostatniego meczu danego dnia.
+    """
     try:
-        df = playergamelog.PlayerGameLog(player_id=player_id, season="2025-26", timeout=30).get_data_frames()[0]
-        if not df.empty:
-            return player_id, df.iloc[0]
-        return player_id, None
+        df = leaguegamelog.LeagueGameLog(
+            player_or_team_abbreviation="P",
+            date_from_nullable=target_date,
+            date_to_nullable=target_date,
+            season=SEASON,
+            timeout=60
+        ).get_data_frames()[0]
+
+        player_latest_game = {}
+        for _, row in df.iterrows():
+            pid = row["PLAYER_ID"]
+            if pid in player_ids:
+                # zostawiamy tylko ostatni mecz danego dnia
+                if pid not in player_latest_game:
+                    player_latest_game[pid] = row
+        return player_latest_game
+
     except Exception as e:
-        print(f"Failed to fetch player {player_id}: {e}")
-        return player_id, None
+        print(f"Failed to fetch game logs: {e}")
+        return {}
+
 
 def sync_all_players_from_api():
     """
-    Fetches all players and their positions from the API, then creates new players
-    or updates existing ones in the database.
+    Sync wszystkich aktywnych zawodników z API
     """
     print("Syncing all players from NBA API...")
     db = SessionLocal()
@@ -80,11 +99,16 @@ def sync_all_players_from_api():
     finally:
         db.close()
 
+
 def update_stats_for_active_players():
-    print("Updating stats using BATCH method...")
+    """
+    Aktualizacja fantasy points dla aktywnych zawodników.
+    Pobiera statystyki wszystkich graczy z ostatniego dnia jednym zapytaniem.
+    """
+    print("Updating stats using single daily query...")
     db = SessionLocal()
     try:
-        active_players = db.query(Player).options(joinedload(Player.game_stats)).filter(Player.is_active == True).all()
+        active_players = db.query(Player).options(joinedload(Player.game_stats), joinedload(Player.users)).filter(Player.is_active == True).all()
         if not active_players:
             print("No active players found.")
             return
@@ -94,52 +118,54 @@ def update_stats_for_active_players():
         total_players = len(player_ids)
         print(f"Active players: {total_players}")
 
+        # Ustalamy datę ostatniego dnia (UTC)
+        target_date = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+        print(f"Fetching games for {target_date}...")
+
+        latest_games = fetch_latest_game_logs(player_ids, target_date)
+
         updated_count = 0
 
-        # Dzielimy na batch-e
-        for i in range(0, total_players, BATCH_SIZE):
-            batch_ids = player_ids[i:i + BATCH_SIZE]
-            print(f"Fetching batch {i//BATCH_SIZE + 1} ({len(batch_ids)} players)...")
+        for pid, latest_game in latest_games.items():
+            if latest_game is None:
+                continue
 
-            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-                futures = [executor.submit(fetch_latest_game_log, pid) for pid in batch_ids]
-                for future in as_completed(futures):
-                    player_id, latest_game = future.result()
-                    if latest_game is None:
-                        continue
+            player = player_map[pid]
+            game_id = latest_game["GAME_ID"]
 
-                    player = player_map[player_id]
-                    game_id = latest_game["Game_ID"]
-                    existing_game = next((g for g in player.game_stats if g.game_id == game_id), None)
-                    if existing_game:
-                        continue
+            # sprawdzamy czy gra już jest w DB
+            existing_game = next((g for g in player.game_stats if g.game_id == game_id), None)
+            if existing_game:
+                continue
 
-                    points = int(latest_game["PTS"])
-                    rebounds = int(latest_game["REB"])
-                    assists = int(latest_game["AST"])
-                    fp = points + 1.2 * rebounds + 1.5 * assists
+            points = int(latest_game["PTS"])
+            rebounds = int(latest_game["REB"])
+            assists = int(latest_game["AST"])
+            fp = points + 1.2 * rebounds + 1.5 * assists
 
-                    new_game = PlayerGameStats(
-                        player_id=player.id,
-                        game_id=game_id,
-                        game_date=latest_game["GAME_DATE"],
-                        points=points,
-                        rebounds=rebounds,
-                        assists=assists,
-                        fantasy_points=fp
-                    )
-                    db.add(new_game)
-                    player.game_stats.append(new_game)
+            new_game = PlayerGameStats(
+                player_id=player.id,
+                game_id=game_id,
+                game_date=latest_game["GAME_DATE"],
+                points=points,
+                rebounds=rebounds,
+                assists=assists,
+                fantasy_points=fp
+            )
+            db.add(new_game)
+            player.game_stats.append(new_game)
 
-                    # aktualizacja średnich FP
-                    total_fp = sum(stat.fantasy_points for stat in player.game_stats)
-                    player.average_fantasy_points = total_fp / len(player.game_stats)
+            # aktualizacja średnich FP
+            total_fp = sum(stat.fantasy_points for stat in player.game_stats)
+            player.average_fantasy_points = total_fp / len(player.game_stats)
 
-                    updated_count += 1
-                    print(f"Updated {player.full_name} ({game_id}), avg FP: {player.average_fantasy_points:.2f}")
+            # aktualizacja punktów fantasy użytkowników
+            for user in player.users:
+                user.total_fantasy_points += fp
+                print(f"      - Updating user {user.email}, new total FP: {user.total_fantasy_points:.2f}")
 
-            # Pauza między batchami, żeby nie przeciążać API
-            time.sleep(40)
+            updated_count += 1
+            print(f"Updated {player.full_name} ({game_id}), avg FP: {player.average_fantasy_points:.2f}")
 
         db.commit()
         print(f"\nUpdated stats for {updated_count} games.")
@@ -149,6 +175,7 @@ def update_stats_for_active_players():
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     print("Initializing database...")

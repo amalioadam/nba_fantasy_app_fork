@@ -25,6 +25,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="user", nullable=False)  # Role: 'user' or 'admin'
+    total_fantasy_points = Column(Float, default=0.0, nullable=False)
 
     # Relacja do zawodników w drużynie użytkownika
     players = relationship(

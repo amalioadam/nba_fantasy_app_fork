@@ -1,5 +1,5 @@
-import React from 'react';
-import { useAuth } from '../AuthContext';
+import React from "react";
+import { useAuth } from "../AuthContext";
 
 export const HomePage = () => {
   const { token, logout } = useAuth(); // Używamy hooka useAuth

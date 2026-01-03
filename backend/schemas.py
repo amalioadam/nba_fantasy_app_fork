@@ -33,6 +33,9 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+class UserTeam(User):
+    total_fantasy_points: float
+
 class UserLogin(BaseModel):
     email: str
     password: str

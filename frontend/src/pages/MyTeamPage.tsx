@@ -43,7 +43,9 @@ export const MyTeamPage = () => {
 
     // Optimistic UI update: remove player from state immediately
     const originalTeam = [...team];
-    setTeam(currentTeam => currentTeam.filter(player => player.id !== playerId));
+    setTeam((currentTeam) =>
+      currentTeam.filter((player) => player.id !== playerId)
+    );
 
     try {
       await removePlayerFromTeam(token, playerId);
@@ -66,7 +68,10 @@ export const MyTeamPage = () => {
     <div>
       <h2>My Team</h2>
       {team.length === 0 ? (
-        <p>You haven't selected any players yet. Go to the Players page to build your team!</p>
+        <p>
+          You haven't selected any players yet. Go to the Players page to build
+          your team!
+        </p>
       ) : (
         <div style={teamListStyle}>
           {team.map((player) => (
