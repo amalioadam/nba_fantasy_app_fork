@@ -28,6 +28,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     id: int
     role: str
+    total_fantasy_points: float
     players: List[Player] = []
 
     class Config:

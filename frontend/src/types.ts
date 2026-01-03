@@ -1,3 +1,11 @@
+export interface User {
+  id: number;
+  email: string;
+  role: string;
+  total_fantasy_points: number;
+  players: Player[]; // Dodano graczy do interfejsu User
+}
+
 export interface Player {
   id: number;
   full_name: string;
@@ -5,12 +13,4 @@ export interface Player {
   team_name: string | null;
   average_fantasy_points: number;
   last_game_fantasy_points: number | null;
-}
-
-export interface UserTeam {
-  id: number;
-  email: string;
-  role: string;
-  players: Player[];
-  total_fantasy_points: number;
 }

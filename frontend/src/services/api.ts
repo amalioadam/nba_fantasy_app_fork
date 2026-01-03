@@ -19,6 +19,15 @@ export const loginUser = async (email: string, password: string) => {
     return response.data;
 };
 
+export const getUsersMe = async (token: string) => {
+    const response = await api.get('/users/me', {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    return response.data;
+};
+
 export const getPlayers = async (token: string) => {
     const response = await api.get('/players', {
         headers: {
