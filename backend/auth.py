@@ -4,15 +4,16 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional
+import os
 
 from sqlalchemy.orm import Session
 import models, schemas
 from models import get_db
 
-# Konfiguracja
-SECRET_KEY = "YOUR_SECRET_KEY"  # W przyszłości przenieść do zmiennych środowiskowych
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+# Konfiguracja - używamy zmiennych środowiskowych
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # Kontekst do hashowania haseł
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
