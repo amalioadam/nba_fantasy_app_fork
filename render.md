@@ -169,12 +169,21 @@ origins = [
 
 #### **WHAT CHANGED:**
 ```python
+# CHANGED:
+bcrypt==4.0.1  # Downgraded from 5.0.0
+
 # ADDED at the end:
 psycopg2-binary==2.9.10
 gunicorn==21.2.0
 ```
 
 #### **WHY:**
+- **`bcrypt==4.0.1`**: Fixed compatibility issue
+  - `bcrypt==5.0.0` has compatibility problems with `passlib==1.7.4`
+  - This was causing registration errors: "AttributeError: module 'bcrypt' has no attribute '__about__'"
+  - Version 4.0.1 is the stable version that works correctly with passlib
+  - Without this fix, users cannot register or login
+
 - **`psycopg2-binary`**: PostgreSQL driver for Python
   - SQLite works out-of-the-box in Python
   - PostgreSQL requires an additional library to connect
@@ -408,6 +417,7 @@ REACT_APP_API_URL=http://localhost:8000
 - [ ] Update `auth.py` to use environment variables for secrets
 - [ ] Update `main.py` CORS to include production frontend URL
 - [ ] Add PostgreSQL driver to `requirements.txt`
+- [ ] Fix bcrypt version to 4.0.1 in `requirements.txt`
 - [ ] Create `backend/.env.example` with all required variables
 
 **Frontend:**
@@ -454,30 +464,57 @@ VARIABLE = os.getenv("VARIABLE_NAME", "default_value_for_development")
 ### 5. **Frontend API Calls:**
 - Always use environment variables for API URLs
 - In React: Must start with `REACT_APP_`
-- Set during build time, not runtime
+## Common Mistakes to Avoid
 
-### 6. **Infrastructure as Code:**
-- `render.yaml`, `docker-compose.yml`, Kubernetes manifests
-- Version control your infrastructure
-- Reproducible deployments
+### ❌ **Mistake 1: Using Incompatible bcrypt Version**
+```python
+bcrypt==5.0.0  # Causes registration errors!
+```
+
+### ✅ **Fix:**
+```python
+bcrypt==4.0.1  # Compatible with passlib 1.7.4
+```
+
+**Error you'll see:** `AttributeError: module 'bcrypt' has no attribute '__about__'` or `ValueError: password cannot be longer than 72 bytes`
+
+### ❌ **Mistake 4: Committing Secrets**
+```python
+SECRET_KEY = "super-secret-key-123"  # In Git history forever!
+```
+
+### ✅ **Fix:**
+- Use environment variables
+- Add `.env` to `.gitignore`
+- Provide `.env.example` as template
 
 ---
 
-## Common Mistakes to Avoid
+### ❌ **Mistake 5: Forgetting Database Differences**
+---
 
-### ❌ **Mistake 1: Hardcoding URLs**
+### ❌ **Mistake 3: Hardcoding URLs**
 ```python
 API_URL = "http://localhost:8000"  # Only works locally!
 ```
 
 ### ✅ **Fix:**
+### ❌ **Mistake 5: Forgetting Database Differences**
 ```python
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+# This breaks PostgreSQL!
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+```
+
+### ✅ **Fix:**
+```python
+# Conditional configuration
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 ```
 
 ---
 
-### ❌ **Mistake 2: Committing Secrets**
+### ❌ **Mistake 6: Wrong Environment Variable Names in React**
 ```python
 SECRET_KEY = "super-secret-key-123"  # In Git history forever!
 ```
@@ -603,7 +640,61 @@ npm start
 ```
 
 ---
+## Troubleshooting Deployment Issues
 
+### Issue 1: Registration/Login Fails with bcrypt Error
+
+**Error:** `AttributeError: module 'bcrypt' has no attribute '__about__'`
+
+**Cause:** Incompatible bcrypt version (5.0.0) with passlib
+
+**Solution:**
+1. Update `requirements.txt`: Change `bcrypt==5.0.0` to `bcrypt==4.0.1`
+2. Commit and push changes
+3. Render will automatically redeploy
+4. Or manually deploy with "Clear build cache & deploy"
+
+---
+
+### Issue 2: Frontend Can't Connect to Backend
+
+**Symptom:** CORS errors, 404 errors, or requests going to wrong URL
+
+**Solution:**
+1. Check backend URL in Render dashboard
+2. Update frontend environment variable `REACT_APP_API_URL` to match actual backend URL
+3. Common issue: URL ends with `-fx19` or other suffix
+4. Update `render.yaml` or manually update in Render dashboard
+
+---
+
+### Issue 3: Wrong Application Running (Django Instead of FastAPI)
+
+**Symptom:** Seeing Django error pages instead of FastAPI
+
+**Cause:** Render deployed wrong repository or wrong service
+
+**Solution:**
+1. Delete the incorrect service
+2. Verify repository and branch in Render dashboard
+3. Ensure `rootDir` is set to `backend`
+4. Check logs show "Uvicorn running" not Django messages
+
+---
+
+### Issue 4: Database Connection Errors
+
+**Error:** Can't connect to PostgreSQL
+
+**Solution:**
+1. Verify `DATABASE_URL` environment variable is set
+2. Check it's linked from database (not manually typed)
+3. Ensure `psycopg2-binary` is in requirements.txt
+4. Check database service is running
+
+---
+
+## Final Notes
 ## Final Notes
 
 ### What You Learned:
@@ -631,7 +722,7 @@ npm start
 
 
 
-Summary
+ZMIENIONE pliki
 Total Files Modified: 5
 
 models.py
@@ -645,3 +736,12 @@ Total New Files Created: 3
 .env.example
 render.yaml
 
+
+
+
+----------
+Inne narzedia
+https://ui.shadcn.com/docs wyjasnienie https://www.swhabitation.com/blogs/tailwind-css-vs-shadcn-which-should-you-choose-for-your-next-project
+
+
+https://cron-job.org/en/
