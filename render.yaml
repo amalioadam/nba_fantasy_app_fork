@@ -24,11 +24,10 @@ services:
         value: 30
     healthCheckPath: /
 
-  # React Frontend Service
+  # React Frontend Service (Static Site)
   - type: web
     name: nba-fantasy-frontend
     runtime: static
-    plan: free
     branch: main
     rootDir: frontend
     buildCommand: npm install && npm run build
