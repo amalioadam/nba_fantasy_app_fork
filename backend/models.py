@@ -6,8 +6,16 @@ from typing import Optional
 
 # Absolutna ścieżka do katalogu, w którym znajduje się ten plik
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Absolutna ścieżka do pliku bazy danych
-DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'data', 'nba_fantasy.db')}"
+
+# Check if DATABASE_URL is set (production with PostgreSQL) or use SQLite (development)
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{os.path.join(BASE_DIR, 'data', 'nba_fantasy.db')}"
+)
+
+# Render.com uses postgres:// but SQLAlchemy requires postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 Base = declarative_base()
 
@@ -85,9 +93,9 @@ class PlayerGameStats(Base):
 
 
 # Konfiguracja silnika bazy danych
-engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
-)
+# Use check_same_thread only for SQLite
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 # Sesja bazy danych
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
