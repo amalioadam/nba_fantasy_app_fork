@@ -22,6 +22,8 @@ services:
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
+      - key: FRONTEND_URL
+        value: https://nba-fantasy-frontend.onrender.com
     healthCheckPath: /
 
   # React Frontend Service (Static Site)
@@ -36,7 +38,7 @@ services:
       - key: NODE_VERSION
         value: 18.17.0
       - key: REACT_APP_API_URL
-        value: https://nba-fantasy-backend.onrender.com
+        value: https://nba-fantasy-backend-fx19.onrender.com
     routes:
       - type: rewrite
         source: /*
