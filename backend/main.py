@@ -5,6 +5,7 @@ from datetime import timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from scripts.fetch_nba_players import update_stats_for_active_players
 import atexit
+import os
 
 import auth, models, schemas
 from models import get_db, create_tables
@@ -15,12 +16,18 @@ create_tables()
 
 app = FastAPI()
 
-# TODO: Skonfigurować CORS prawidłowo dla frontendu
+# Konfiguracja CORS dla frontendu
 from fastapi.middleware.cors import CORSMiddleware
+
+# Pobierz URL frontendu ze zmiennych środowiskowych
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 origins = [
     "http://localhost",
-    "http://localhost:3000", # Adres deweloperski aplikacji React
+    "http://localhost:3000",  # Adres deweloperski aplikacji React
+    FRONTEND_URL,  # URL produkcyjny frontendu
 ]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
